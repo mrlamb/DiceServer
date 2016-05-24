@@ -10,12 +10,12 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using Microsoft.VisualBasic;
 
 
 delegate void AddMessage(string newstring);
 delegate void ToggleButton(Button button);
-delegate void ToggleConnectionIcon();
-delegate void ToggleConnectionText();
+delegate void ToggleConnectionInfo();
 
 namespace DiceClient
 {
@@ -23,8 +23,7 @@ namespace DiceClient
     {
         private event AddMessage m_addMessage;
         private event ToggleButton m_toggleButton;
-        private event ToggleConnectionIcon m_toggleConnectionIcon;
-        private event ToggleConnectionText m_toggleConnectionText;
+        private event ToggleConnectionInfo m_toggleConnectionInfo;
         string Host;
         Socket socket;
         Random rnd = new Random();
@@ -34,25 +33,24 @@ namespace DiceClient
             InitializeComponent();
             m_addMessage = new AddMessage(OnAddMessage);
             m_toggleButton = new ToggleButton(OnToggleButton);
-            m_toggleConnectionIcon = new ToggleConnectionIcon(OnToggleConnectionIcon);
-            m_toggleConnectionText = new ToggleConnectionText(OnToggleConnectionText);
+
+            m_toggleConnectionInfo = new ToggleConnectionInfo(OnToggleConnectionInfo);
         }
 
-        private void OnToggleConnectionText()
+        private void OnToggleConnectionInfo()
         {
             if (lblConnectionString.Text.Equals("Connected"))
                 lblConnectionString.Text = "Disconnected";
             else
                 lblConnectionString.Text = "Connected";
-        }
 
-        private void OnToggleConnectionIcon()
-        {
             if (lblConnectionString.Text.Equals("Connected"))
                 lblStatusIcon.Image = Properties.Resources.transp_green;
             else
                 lblStatusIcon.Image = Properties.Resources.transp_red;
         }
+
+
 
         private void OnToggleButton(Button button)
         {
@@ -62,6 +60,7 @@ namespace DiceClient
         private void OnAddMessage(string newstring)
         {
             lbOutput.Items.Add(newstring);
+            lbOutput.TopIndex = lbOutput.Items.Count - 1;
         }
 
         private void DiceForm_Load(object sender, EventArgs e)
@@ -97,8 +96,8 @@ namespace DiceClient
                 {
                     SetupReceiveCallback(socket);
                     ToggleButtons();
-                    Invoke(m_toggleConnectionText);
-                    Invoke(m_toggleConnectionIcon);
+                    Invoke(m_toggleConnectionInfo);
+
                 }
             }
             catch (Exception ex)
@@ -138,8 +137,16 @@ namespace DiceClient
                 if (bytesRec > 0)
                 {
                     string recString = Encoding.ASCII.GetString(buffer, 0, bytesRec);
-
-                    Invoke(m_addMessage, new string[] { recString });
+                    if (recString.Contains("IDENTIFY"))
+                    {
+                        string message = string.Empty;
+                        do { message = Interaction.InputBox("Enter your identifier"); }
+                        while (message.Equals(string.Empty));
+                        message = "IDENTITY " + message;
+                        socket.Send(Encoding.ASCII.GetBytes(message));
+                    }
+                    else
+                        Invoke(m_addMessage, new string[] { recString });
 
                     SetupReceiveCallback(socket);
                 }
@@ -147,8 +154,8 @@ namespace DiceClient
             catch (SocketException se)
             {
                 ToggleButtons();
-                Invoke(m_toggleConnectionText);
-                Invoke(m_toggleConnectionIcon);
+                Invoke(m_toggleConnectionInfo);
+
 
                 MessageBox.Show("A connection error has occurred.", "Disconnected", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
@@ -178,7 +185,7 @@ namespace DiceClient
             }
             if (socket.Connected)
             {
-                string Message = txtName.Text + " (D20): " + (rnd.Next(20) + 1).ToString();
+                string Message = "ROLL " + txtName.Text + " (D20): " + (rnd.Next(20) + 1).ToString();
                 socket.Send(Encoding.ASCII.GetBytes(Message));
             }
         }
@@ -192,7 +199,7 @@ namespace DiceClient
             }
             if (socket.Connected)
             {
-                string Message = txtName.Text + " (D10): " + (rnd.Next(10) + 1).ToString();
+                string Message = "ROLL " + txtName.Text + " (D10): " + (rnd.Next(10) + 1).ToString();
                 socket.Send(Encoding.ASCII.GetBytes(Message));
             }
         }
@@ -206,7 +213,7 @@ namespace DiceClient
             }
             if (socket.Connected)
             {
-                string Message = txtName.Text + " (D8): " + (rnd.Next(8) + 1).ToString();
+                string Message = "ROLL " + txtName.Text + " (D8): " + (rnd.Next(8) + 1).ToString();
                 socket.Send(Encoding.ASCII.GetBytes(Message));
             }
         }
@@ -220,7 +227,7 @@ namespace DiceClient
             }
             if (socket.Connected)
             {
-                string Message = txtName.Text + " (D6): " + (rnd.Next(6) + 1).ToString();
+                string Message = "ROLL " + txtName.Text + " (D6): " + (rnd.Next(6) + 1).ToString();
                 socket.Send(Encoding.ASCII.GetBytes(Message));
             }
         }
@@ -234,7 +241,7 @@ namespace DiceClient
             }
             if (socket.Connected)
             {
-                string Message = txtName.Text + " (D4): " + (rnd.Next(4) + 1).ToString();
+                string Message = "ROLL " + txtName.Text + " (D4): " + (rnd.Next(4) + 1).ToString();
                 socket.Send(Encoding.ASCII.GetBytes(Message));
             }
         }
@@ -248,7 +255,7 @@ namespace DiceClient
             }
             if (socket.Connected)
             {
-                string Message = txtName.Text + " (D100): " + (rnd.Next(100) + 1).ToString();
+                string Message = "ROLL " + txtName.Text + " (D100): " + (rnd.Next(100) + 1).ToString();
                 socket.Send(Encoding.ASCII.GetBytes(Message));
             }
         }

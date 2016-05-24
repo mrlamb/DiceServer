@@ -10,7 +10,7 @@ namespace Server_Worker
 {
     class Server
     {
-        Socket[] Listeners = new Socket[10];
+        List<Client> Listeners = new List<Client>();
         int Clients = 0;
 
         static void Main(string[] args)
@@ -41,13 +41,14 @@ namespace Server_Worker
         {
 
             Socket listener = (Socket)ar.AsyncState;
-            Socket client = listener.EndAccept(ar);
-            Listeners[Clients] = client;
-            Console.WriteLine("Client #{0} connected on {1}", Clients, client.RemoteEndPoint);
-            WaitForData(Listeners[Clients]);
-
-            ++Clients;
-
+            Socket socket = listener.EndAccept(ar);
+            Client client = new Client(socket);
+            
+            Listeners.Add(client);
+            Console.WriteLine("Client #{0} connected on {1}", Clients, client.Socket.RemoteEndPoint);
+            WaitForData(client.Socket);
+            string request = "IDENTIFY";
+            client.Socket.Send(Encoding.ASCII.GetBytes(request));
 
             listener.BeginAccept(new AsyncCallback(OnConnectCallback), listener);
 
@@ -66,19 +67,26 @@ namespace Server_Worker
 
         private void OnReceive(IAsyncResult ar)
         {
+            
             Socket socket = (Socket)ar.AsyncState;
-            try {
+            Client client = Listeners.Find(a => a.Socket.Equals(socket));
+            try
+            {
                 int bytesRec = socket.EndReceive(ar);
                 if (bytesRec > 0)
                 {
                     string message = Encoding.ASCII.GetString(buffer, 0, bytesRec);
-                    Propagate(message);
+                    if (message.Contains("ROLL"))
+                        Propagate(message);
+                    else if (message.Contains("IDENTITY"))
+                        client.Identity = message.Substring(message.IndexOf(' ') + 1);
+                        
 
                     AsyncCallback receiveData = new AsyncCallback(OnReceive);
                     socket.BeginReceive(buffer, 0, buffer.Length, SocketFlags.None, receiveData, socket);
                 }
             }
-            catch(SocketException ex)
+            catch (SocketException ex)
             {
                 socket = null;
             }
@@ -86,11 +94,11 @@ namespace Server_Worker
 
         private void Propagate(string message)
         {
-            foreach (Socket sock in Listeners)
+            foreach (Client client in Listeners)
             {
-                if (sock != null && sock.Connected)
+                if (client.Socket != null && client.Socket.Connected)
                 {
-                    sock.Send(Encoding.ASCII.GetBytes(message));
+                    client.Socket.Send(Encoding.ASCII.GetBytes(message.Substring(message.IndexOf(' ')+1)));
                 }
             }
         }
