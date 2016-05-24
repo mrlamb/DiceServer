@@ -39,6 +39,10 @@
             this.btnD6 = new System.Windows.Forms.Button();
             this.btnD4 = new System.Windows.Forms.Button();
             this.btnD100 = new System.Windows.Forms.Button();
+            this.statusStrip1 = new System.Windows.Forms.StatusStrip();
+            this.lblConnectionString = new System.Windows.Forms.ToolStripStatusLabel();
+            this.lblStatusIcon = new System.Windows.Forms.ToolStripStatusLabel();
+            this.statusStrip1.SuspendLayout();
             this.SuspendLayout();
             // 
             // txtHost
@@ -63,6 +67,7 @@
             this.lbOutput.FormattingEnabled = true;
             this.lbOutput.Location = new System.Drawing.Point(13, 40);
             this.lbOutput.Name = "lbOutput";
+            this.lbOutput.SelectionMode = System.Windows.Forms.SelectionMode.None;
             this.lbOutput.Size = new System.Drawing.Size(204, 212);
             this.lbOutput.TabIndex = 2;
             // 
@@ -149,11 +154,36 @@
             this.btnD100.UseVisualStyleBackColor = true;
             this.btnD100.Click += new System.EventHandler(this.btnD100_Click);
             // 
+            // statusStrip1
+            // 
+            this.statusStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.lblStatusIcon,
+            this.lblConnectionString});
+            this.statusStrip1.Location = new System.Drawing.Point(0, 260);
+            this.statusStrip1.Name = "statusStrip1";
+            this.statusStrip1.Size = new System.Drawing.Size(341, 22);
+            this.statusStrip1.TabIndex = 11;
+            this.statusStrip1.Text = "statusStrip1";
+            // 
+            // lblConnectionString
+            // 
+            this.lblConnectionString.Name = "lblConnectionString";
+            this.lblConnectionString.Size = new System.Drawing.Size(79, 17);
+            this.lblConnectionString.Text = "Disconnected";
+            // 
+            // lblStatusIcon
+            // 
+            this.lblStatusIcon.Image = global::DiceClient.Properties.Resources.transp_red;
+            this.lblStatusIcon.ImageTransparentColor = System.Drawing.Color.White;
+            this.lblStatusIcon.Name = "lblStatusIcon";
+            this.lblStatusIcon.Size = new System.Drawing.Size(16, 17);
+            // 
             // DiceForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(341, 261);
+            this.ClientSize = new System.Drawing.Size(341, 282);
+            this.Controls.Add(this.statusStrip1);
             this.Controls.Add(this.btnD100);
             this.Controls.Add(this.btnD4);
             this.Controls.Add(this.btnD6);
@@ -168,6 +198,8 @@
             this.Name = "DiceForm";
             this.Text = "Dice Roller";
             this.Load += new System.EventHandler(this.DiceForm_Load);
+            this.statusStrip1.ResumeLayout(false);
+            this.statusStrip1.PerformLayout();
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -186,6 +218,9 @@
         private System.Windows.Forms.Button btnD6;
         private System.Windows.Forms.Button btnD4;
         private System.Windows.Forms.Button btnD100;
+        private System.Windows.Forms.StatusStrip statusStrip1;
+        private System.Windows.Forms.ToolStripStatusLabel lblStatusIcon;
+        private System.Windows.Forms.ToolStripStatusLabel lblConnectionString;
     }
 }
 

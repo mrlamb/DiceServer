@@ -13,19 +13,50 @@ using System.Windows.Forms;
 
 
 delegate void AddMessage(string newstring);
+delegate void ToggleButton(Button button);
+delegate void ToggleConnectionIcon();
+delegate void ToggleConnectionText();
 
 namespace DiceClient
 {
     public partial class DiceForm : Form
     {
         private event AddMessage m_addMessage;
+        private event ToggleButton m_toggleButton;
+        private event ToggleConnectionIcon m_toggleConnectionIcon;
+        private event ToggleConnectionText m_toggleConnectionText;
         string Host;
         Socket socket;
+        Random rnd = new Random();
 
         public DiceForm()
         {
             InitializeComponent();
             m_addMessage = new AddMessage(OnAddMessage);
+            m_toggleButton = new ToggleButton(OnToggleButton);
+            m_toggleConnectionIcon = new ToggleConnectionIcon(OnToggleConnectionIcon);
+            m_toggleConnectionText = new ToggleConnectionText(OnToggleConnectionText);
+        }
+
+        private void OnToggleConnectionText()
+        {
+            if (lblConnectionString.Text.Equals("Connected"))
+                lblConnectionString.Text = "Disconnected";
+            else
+                lblConnectionString.Text = "Connected";
+        }
+
+        private void OnToggleConnectionIcon()
+        {
+            if (lblConnectionString.Text.Equals("Connected"))
+                lblStatusIcon.Image = Properties.Resources.transp_green;
+            else
+                lblStatusIcon.Image = Properties.Resources.transp_red;
+        }
+
+        private void OnToggleButton(Button button)
+        {
+            button.Enabled = !button.Enabled;
         }
 
         private void OnAddMessage(string newstring)
@@ -65,13 +96,9 @@ namespace DiceClient
                 if (socket.Connected)
                 {
                     SetupReceiveCallback(socket);
-                    btnConnect.Enabled = false;
-                    btnD20.Enabled = true;
-                    btnD10.Enabled = true;
-                    btnD8.Enabled = true;
-                    btnD6.Enabled = true;
-                    btnD4.Enabled = true;
-                    btnD100.Enabled = true;
+                    ToggleButtons();
+                    Invoke(m_toggleConnectionText);
+                    Invoke(m_toggleConnectionIcon);
                 }
             }
             catch (Exception ex)
@@ -91,9 +118,13 @@ namespace DiceClient
                 socket.BeginReceive(buffer, 0, buffer.Length, SocketFlags.None, receiveData, socket);
 
             }
+            catch (SocketException se)
+            {
+                MessageBox.Show("Socket Exception: " + se.Message);
+            }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.Message);
+                MessageBox.Show("SetupReceiveCallBack Exception: " + ex.Message);
             }
         }
 
@@ -113,10 +144,29 @@ namespace DiceClient
                     SetupReceiveCallback(socket);
                 }
             }
+            catch (SocketException se)
+            {
+                ToggleButtons();
+                Invoke(m_toggleConnectionText);
+                Invoke(m_toggleConnectionIcon);
+
+                MessageBox.Show("A connection error has occurred.", "Disconnected", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.Message);
+                MessageBox.Show("OnReceiveData Exception: " + ex.Message);
             }
+        }
+
+        private void ToggleButtons()
+        {
+            Invoke(m_toggleButton, btnConnect);
+            Invoke(m_toggleButton, btnD20);
+            Invoke(m_toggleButton, btnD10);
+            Invoke(m_toggleButton, btnD8);
+            Invoke(m_toggleButton, btnD6);
+            Invoke(m_toggleButton, btnD4);
+            Invoke(m_toggleButton, btnD100);
         }
 
         private void btnD20_Click(object sender, EventArgs e)
@@ -128,7 +178,6 @@ namespace DiceClient
             }
             if (socket.Connected)
             {
-                Random rnd = new Random();
                 string Message = txtName.Text + " (D20): " + (rnd.Next(20) + 1).ToString();
                 socket.Send(Encoding.ASCII.GetBytes(Message));
             }
@@ -143,7 +192,6 @@ namespace DiceClient
             }
             if (socket.Connected)
             {
-                Random rnd = new Random();
                 string Message = txtName.Text + " (D10): " + (rnd.Next(10) + 1).ToString();
                 socket.Send(Encoding.ASCII.GetBytes(Message));
             }
@@ -158,7 +206,6 @@ namespace DiceClient
             }
             if (socket.Connected)
             {
-                Random rnd = new Random();
                 string Message = txtName.Text + " (D8): " + (rnd.Next(8) + 1).ToString();
                 socket.Send(Encoding.ASCII.GetBytes(Message));
             }
@@ -173,7 +220,6 @@ namespace DiceClient
             }
             if (socket.Connected)
             {
-                Random rnd = new Random();
                 string Message = txtName.Text + " (D6): " + (rnd.Next(6) + 1).ToString();
                 socket.Send(Encoding.ASCII.GetBytes(Message));
             }
@@ -188,7 +234,6 @@ namespace DiceClient
             }
             if (socket.Connected)
             {
-                Random rnd = new Random();
                 string Message = txtName.Text + " (D4): " + (rnd.Next(4) + 1).ToString();
                 socket.Send(Encoding.ASCII.GetBytes(Message));
             }
@@ -203,7 +248,6 @@ namespace DiceClient
             }
             if (socket.Connected)
             {
-                Random rnd = new Random();
                 string Message = txtName.Text + " (D100): " + (rnd.Next(100) + 1).ToString();
                 socket.Send(Encoding.ASCII.GetBytes(Message));
             }
