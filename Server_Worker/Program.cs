@@ -5,6 +5,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading.Tasks;
+using MRLamb.StringUtils;
 
 namespace Server_Worker
 {
@@ -33,8 +34,24 @@ namespace Server_Worker
             Console.WriteLine("Server started. Awaiting connections..");
 
             listener.BeginAccept(new AsyncCallback(OnConnectCallback), listener);
-            Console.WriteLine("Press any key to exit");
-            Console.ReadKey();
+            Console.WriteLine("Enter LIST to view connections or EXIT to exit.");
+            do
+            {
+                
+                string command = Console.ReadLine();
+                if (command.Equals("LIST"))
+                {
+                    foreach(Client client in Listeners)
+                    {
+                        Console.WriteLine(client.Identity);
+                    }
+                }
+                else if (command.Equals("EXIT"))
+                {
+                    break;
+                }
+                
+            } while (true);
         }
 
         private void OnConnectCallback(IAsyncResult ar)
@@ -98,6 +115,7 @@ namespace Server_Worker
             {
                 if (client.Socket != null && client.Socket.Connected)
                 {
+                    message = message.TrimInnerWhitespace();
                     client.Socket.Send(Encoding.ASCII.GetBytes(message.Substring(message.IndexOf(' ')+1)));
                 }
             }

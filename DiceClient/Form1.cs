@@ -9,6 +9,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading.Tasks;
+using System.Timers;
 using System.Windows.Forms;
 using Microsoft.VisualBasic;
 
@@ -16,6 +17,7 @@ using Microsoft.VisualBasic;
 delegate void AddMessage(string newstring);
 delegate void ToggleButton(Button button);
 delegate void ToggleConnectionInfo();
+delegate void SetTextName();
 
 namespace DiceClient
 {
@@ -24,17 +26,37 @@ namespace DiceClient
         private event AddMessage m_addMessage;
         private event ToggleButton m_toggleButton;
         private event ToggleConnectionInfo m_toggleConnectionInfo;
+        private event SetTextName m_setTextName;
         string Host;
         Socket socket;
         Random rnd = new Random();
+        public string Identity { get; private set; }
+
+        //Heartbeat timer to check connection
+        System.Timers.Timer timer = new System.Timers.Timer(30000);
 
         public DiceForm()
         {
             InitializeComponent();
             m_addMessage = new AddMessage(OnAddMessage);
             m_toggleButton = new ToggleButton(OnToggleButton);
-
+            m_setTextName = new SetTextName(OnSetTextName);
             m_toggleConnectionInfo = new ToggleConnectionInfo(OnToggleConnectionInfo);
+
+            timer.Elapsed += new ElapsedEventHandler(HeartbeatCheck);
+            timer.Enabled = false;
+            timer.AutoReset = true;
+        }
+
+        private void OnSetTextName()
+        {
+            txtName.Text = Identity;
+        }
+
+        private void HeartbeatCheck(object source, ElapsedEventArgs e)
+        {
+            if (!socket.Connected)
+                ConnectSocket();
         }
 
         private void OnToggleConnectionInfo()
@@ -88,9 +110,7 @@ namespace DiceClient
             Cursor.Current = Cursors.WaitCursor;
             try
             {
-                socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-                IPEndPoint ipe = new IPEndPoint(IPAddress.Parse(Host), 11000);
-                socket.Connect(ipe);
+                ConnectSocket();
 
                 if (socket.Connected)
                 {
@@ -107,8 +127,16 @@ namespace DiceClient
             Cursor.Current = cursor;
         }
 
+        private void ConnectSocket()
+        {
+            socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+            IPEndPoint ipe = new IPEndPoint(IPAddress.Parse(txtHost.Text), 11000);
+            socket.Connect(ipe);
+        }
 
         byte[] buffer = new byte[256];
+        
+
         private void SetupReceiveCallback(Socket socket)
         {
             try
@@ -140,10 +168,15 @@ namespace DiceClient
                     if (recString.Contains("IDENTIFY"))
                     {
                         string message = string.Empty;
-                        do { message = Interaction.InputBox("Enter your identifier"); }
-                        while (message.Equals(string.Empty));
-                        message = "IDENTITY " + message;
+                        if (string.IsNullOrEmpty(Identity))
+                        {
+                            do { Identity = Interaction.InputBox("Enter your identifier"); }
+                            while (string.IsNullOrEmpty(Identity));
+                        }
+                        Invoke(m_setTextName);
+                        message = "IDENTITY " + Identity;
                         socket.Send(Encoding.ASCII.GetBytes(message));
+                        timer.Enabled = true;
                     }
                     else
                         Invoke(m_addMessage, new string[] { recString });
@@ -165,6 +198,7 @@ namespace DiceClient
             }
         }
 
+        
         private void ToggleButtons()
         {
             Invoke(m_toggleButton, btnConnect);
