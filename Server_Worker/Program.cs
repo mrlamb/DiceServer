@@ -6,52 +6,93 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading.Tasks;
 using MRLamb.StringUtils;
+using System.Timers;
+using System.Windows.Forms;
 
 namespace Server_Worker
 {
     class Server
     {
         List<Client> Listeners = new List<Client>();
+        static ServerWindow serverWindow;
         int Clients = 0;
 
+        System.Timers.Timer timer = new System.Timers.Timer(10000);
+        
         static void Main(string[] args)
         {
+            Application.EnableVisualStyles();
+            Application.SetCompatibleTextRenderingDefault(false);
             Server diceServer = new Server();
             diceServer.Start();
+
+            Application.Run(serverWindow);
         }
+
 
         private void Start()
         {
+
+            serverWindow = new ServerWindow();
+
+            timer.Elapsed += new ElapsedEventHandler(HeartbeatCheck);
+            timer.Enabled = false;
+            timer.AutoReset = true;
+
             string hostName = Dns.GetHostName();
             IPHostEntry ipEntry = Dns.GetHostEntry(hostName);
             IPAddress[] localAddress = ipEntry.AddressList;
-
+            IPEndPoint ipEndPoint = new IPEndPoint(Array.Find(localAddress, a => a.AddressFamily == AddressFamily.InterNetwork), 11000);
             Socket listener = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-            listener.Bind(new IPEndPoint(Array.Find(localAddress, a => a.AddressFamily == AddressFamily.InterNetwork), 11000));
+            listener.Bind(ipEndPoint);
             listener.Listen(100);
-            Console.WriteLine("IP Address: {0}", hostName);
+            Console.WriteLine("IP Address: {0}", ipEndPoint.Address.ToString());
 
             Console.WriteLine("Server started. Awaiting connections..");
 
             listener.BeginAccept(new AsyncCallback(OnConnectCallback), listener);
             Console.WriteLine("Enter LIST to view connections or EXIT to exit.");
-            do
+
+            //do
+            //{
+
+            //    string command = Console.ReadLine();
+            //    if (command.Equals("LIST"))
+            //    {
+            //        foreach (Client client in Listeners)
+            //        {
+            //            Console.WriteLine(client.Identity);
+            //        }
+            //    }
+            //    else if (command.Equals("EXIT"))
+            //    {
+            //        break;
+            //    }
+
+            //} while (true);
+        }
+
+        private void HeartbeatCheck(object sender, ElapsedEventArgs e)
+        {
+            List<Client> remove = new List<Client>();
+            foreach (Client client in Listeners)
             {
-                
-                string command = Console.ReadLine();
-                if (command.Equals("LIST"))
+                if (!client.Socket.Connected)
                 {
-                    foreach(Client client in Listeners)
-                    {
-                        Console.WriteLine(client.Identity);
-                    }
+                    serverWindow.BeginInvoke((Action)(() => { serverWindow.RemoveFromDataGridView(client); }));
+
+                    remove.Add(client);
                 }
-                else if (command.Equals("EXIT"))
+            }
+            if (remove.Count > 0)
+            {
+                foreach (Client client in remove)
                 {
-                    break;
+                    Clients--;
+                    Listeners.Remove(client);
+                    Console.WriteLine(client.Identity + " disconnected.");
                 }
-                
-            } while (true);
+            }
         }
 
         private void OnConnectCallback(IAsyncResult ar)
@@ -60,7 +101,7 @@ namespace Server_Worker
             Socket listener = (Socket)ar.AsyncState;
             Socket socket = listener.EndAccept(ar);
             Client client = new Client(socket);
-            
+
             Listeners.Add(client);
             Console.WriteLine("Client #{0} connected on {1}", Clients, client.Socket.RemoteEndPoint);
             WaitForData(client.Socket);
@@ -68,6 +109,9 @@ namespace Server_Worker
             client.Socket.Send(Encoding.ASCII.GetBytes(request));
 
             listener.BeginAccept(new AsyncCallback(OnConnectCallback), listener);
+            Clients++;
+            timer.Enabled = true;
+            serverWindow.BeginInvoke((Action)(() => { serverWindow.AddToDataGridView(client); }));
 
         }
 
@@ -84,7 +128,7 @@ namespace Server_Worker
 
         private void OnReceive(IAsyncResult ar)
         {
-            
+
             Socket socket = (Socket)ar.AsyncState;
             Client client = Listeners.Find(a => a.Socket.Equals(socket));
             try
@@ -97,7 +141,7 @@ namespace Server_Worker
                         Propagate(message);
                     else if (message.Contains("IDENTITY"))
                         client.Identity = message.Substring(message.IndexOf(' ') + 1);
-                        
+
 
                     AsyncCallback receiveData = new AsyncCallback(OnReceive);
                     socket.BeginReceive(buffer, 0, buffer.Length, SocketFlags.None, receiveData, socket);
@@ -116,7 +160,7 @@ namespace Server_Worker
                 if (client.Socket != null && client.Socket.Connected)
                 {
                     message = message.TrimInnerWhitespace();
-                    client.Socket.Send(Encoding.ASCII.GetBytes(message.Substring(message.IndexOf(' ')+1)));
+                    client.Socket.Send(Encoding.ASCII.GetBytes(message.Substring(message.IndexOf(' ') + 1)));
                 }
             }
         }

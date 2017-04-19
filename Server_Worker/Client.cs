@@ -10,6 +10,7 @@ namespace Server_Worker
     public class Client
     {
         public string Identity { get; set; }
+        public string IPAddress { get { return Socket.RemoteEndPoint.ToString(); } }
         public Socket Socket { get; private set; }
         public Client(Socket socket)
         {

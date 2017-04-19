@@ -55,7 +55,7 @@ namespace DiceClient
 
         private void HeartbeatCheck(object source, ElapsedEventArgs e)
         {
-            if (!socket.Connected)
+            if (socket != null && !socket.Connected)
                 ConnectSocket();
         }
 
@@ -106,25 +106,41 @@ namespace DiceClient
 
         private void btnConnect_Click(object sender, EventArgs e)
         {
+            Button button = (Button)sender;
             Cursor cursor = Cursor.Current;
             Cursor.Current = Cursors.WaitCursor;
-            try
-            {
-                ConnectSocket();
 
-                if (socket.Connected)
+            if (button.Text.Equals("Connect"))
+            {
+
+                try
                 {
-                    SetupReceiveCallback(socket);
-                    ToggleButtons();
-                    Invoke(m_toggleConnectionInfo);
+                    ConnectSocket();
 
+                    if (socket.Connected)
+                    {
+                        SetupReceiveCallback(socket);
+                        ToggleButtons();
+                        Invoke(m_toggleConnectionInfo);
+
+                        button.Text = "Disconnect";
+
+                    }
                 }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(ex.Message);
+                }
+                Cursor.Current = cursor;
             }
-            catch (Exception ex)
+            else
             {
-                MessageBox.Show(ex.Message);
+                socket.Close();
+                socket = null;
+                ToggleButtons();
+                Invoke(m_toggleConnectionInfo);
+                button.Text = "Connect";
             }
-            Cursor.Current = cursor;
         }
 
         private void ConnectSocket()
@@ -135,7 +151,7 @@ namespace DiceClient
         }
 
         byte[] buffer = new byte[256];
-        
+
 
         private void SetupReceiveCallback(Socket socket)
         {
@@ -192,16 +208,20 @@ namespace DiceClient
 
                 MessageBox.Show("A connection error has occurred.", "Disconnected", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+            catch (ObjectDisposedException ode)
+            {
+
+            }
             catch (Exception ex)
             {
                 MessageBox.Show("OnReceiveData Exception: " + ex.Message);
             }
         }
 
-        
+
         private void ToggleButtons()
         {
-            Invoke(m_toggleButton, btnConnect);
+            //Invoke(m_toggleButton, btnConnect);
             Invoke(m_toggleButton, btnD20);
             Invoke(m_toggleButton, btnD10);
             Invoke(m_toggleButton, btnD8);
